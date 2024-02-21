@@ -5,7 +5,7 @@ import datetime
 from .aws_classes import Reservation
 
 
-def gui(instance_name: str = "defiant") -> None:
+def gui(instance_name: str = "Gravemind") -> None:
     sg.theme("SystemDefaultForReal")
     if platform.system() == "Windows":
         ttk_style = "vista"
