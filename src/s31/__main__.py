@@ -5,7 +5,7 @@ import datetime
 from .aws_classes import Reservation
 
 
-def gui(instance_name: str = "Gravemind") -> None:
+def gui(instance_name: str = "Arbiter") -> None:
     sg.theme("SystemDefaultForReal")
     if platform.system() == "Windows":
         ttk_style = "vista"
@@ -156,4 +156,7 @@ def gui(instance_name: str = "Gravemind") -> None:
 
 
 def main():
-    gui("defiant")
+    gui("Arbiter")
+
+if __name__ == "__main__":
+    main()
