@@ -9,6 +9,7 @@ try:
 except PackageNotFoundError:  # pragma: no cover
     __version__ = "unknown"
 
+
 def version_callback(value: bool) -> None:
     """Prints the version of the package."""
     if value:

@@ -4,6 +4,7 @@ import platform
 import datetime
 from .aws_classes import Reservation
 
+
 def psgui(instance_name: str = "Arbiter") -> None:
     sg.theme("SystemDefaultForReal")
     if platform.system() == "Windows":
@@ -152,6 +153,7 @@ def psgui(instance_name: str = "Arbiter") -> None:
         window["-UPTIME-"].update(instance.UpTime)
 
     window.close()
-    
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     psgui("Gravemind")

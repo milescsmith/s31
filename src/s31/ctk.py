@@ -2,17 +2,17 @@ import customtkinter as ck
 
 
 class InstanceFrame(ck.CTkFrame):
-    def __init__(self, master, width=300):
-        super().__init__(master, width=width)
-        
+    def __init__(self, master, width=300, height=36):
+        super().__init__(master, width=width, height=height)
+
         self.selected_instance = ck.StringVar(value="Arbiter")
         self.instance_box = ck.CTkComboBox(
             self,
-            command=self.show_value, 
+            command=self.show_value,
             values=["Arbiter", "Gravemind"],
             variable=self.selected_instance,
-            width=width
-            )
+            width=width,
+        )
         self.instance_box.grid(row=0, column=0, padx=10, pady=5)
 
     def show_value(self, selected_option):
@@ -74,8 +74,7 @@ class SliderFrame(ck.CTkFrame):
 class CheckboxFrame(ck.CTkFrame):
     def __init__(self, master, width=300):
         super().__init__(master, width=width, bg_color="transparent")
-        
-        
+
         self.override_var = ck.StringVar(value="off")
         self.override_cbox = ck.CTkCheckBox(
             self,
@@ -84,19 +83,32 @@ class CheckboxFrame(ck.CTkFrame):
             command=self.override_event,
             variable=self.override_var,
             onvalue="on",
-            offvalue="off"
-            )
-        self.override_cbox.grid(row=0, column=0, padx=5, pady=(5,5), sticky="new")
-    
+            offvalue="off",
+        )
+        self.override_cbox.grid(row=0, column=0, padx=5, pady=(5, 5), sticky="new")
+
     def override_event(self):
         return self.override_var.get()
 
-class ProgressFrame(ck.CTkFrame):
-    def __init__(self, master, width=300):
-        super().__init__(master, width=width)
 
-        self.time_remaining_bar = ck.CTkProgressBar(self, width=width, orientation="horizontal")
-        self.time_remaining_bar.grid(row=0, column=0, sticky="nws")
+class ProgressFrame(ck.CTkFrame):
+    def __init__(self, master, width=300, amount_of_time=0):
+        super().__init__(master, width=width, fg_color="transparent")
+
+        self.time_left = ck.DoubleVar()
+        self.time_left.set(amount_of_time)
+
+        self.time_left_label = ck.CTkLabel(self, text="", fg_color="transparent")
+        self.time_left_label.grid(row=0, column=0, sticky="nws")
+        self.time_remaining_bar = ck.CTkProgressBar(
+            self,
+            width=width,
+            orientation="horizontal",
+            variable=self.time_left,
+            mode="determinate",
+        )
+        self.time_remaining_bar.grid(row=1, column=0, sticky="nws")
+
 
 class App(ck.CTk):
     def __init__(self, width=325, height=200):
@@ -106,8 +118,8 @@ class App(ck.CTk):
 
         self.instance_frame = InstanceFrame(self, width=240)
         self.instance_frame.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nws")
-        
-        self.status_frame = StatusFrame(self, width=300)
+
+        self.status_frame = StatusFrame(self, width=350)
         self.status_frame.grid(row=1, column=0, padx=10, pady=(10, 0), sticky="nws")
 
         self.button_frame = ButtonFrame(self, width=300, button_width=110)
@@ -117,12 +129,33 @@ class App(ck.CTk):
         self.slider_frame.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="nws")
 
         self.override_frame = CheckboxFrame(self, width=250)
-        self.override_frame.grid(row=4, column=0, padx=10, pady=(10,0), sticky="nws")
-        
+        self.override_frame.grid(row=4, column=0, padx=10, pady=(10, 0), sticky="nws")
+
+        self.time_remaining = 1
         self.time_remaining_frame = ProgressFrame(self, width=260)
-        self.time_remaining_frame.grid(row=5, column=0, padx=10, pady=(10,0), sticky="nws")
+        self.time_remaining_frame.grid(
+            row=5, column=0, padx=10, pady=(10, 0), sticky="nws"
+        )
+        self.time_remaining_frame.time_left_label.configure(
+            text=f"{self.time_remaining:.2f}"
+        )
+        self.time_remaining_frame.time_remaining_bar.set(self.time_remaining)
+
+        self.update_progressbar()
+
+    def update_progressbar(self):
+        self.time_remaining -= 0.01
+        self.time_remaining_frame.time_left_label.configure(
+            text=f"{self.time_remaining:.2f}"
+        )
+        self.time_remaining_frame.time_remaining_bar.set(self.time_remaining)
+
+        if self.time_remaining > 0:
+            self.after(100, self.update_progressbar)
+        else:
+            self.time_remaining_frame.time_left_label.configure(text="Time's up!")
 
 
-# TODO make configurable
-app = App(width=275, height=300)
-app.mainloop()
+if __name__ == "__main__":
+    app = App(width=275, height=325)
+    app.mainloop()
