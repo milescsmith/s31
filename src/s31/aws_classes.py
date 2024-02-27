@@ -4,6 +4,8 @@ from mypy_boto3_ec2.service_resource import Instance as AWSInstance
 from datetime import datetime, timezone
 from typing import Any
 
+# Current as of 2024-02-27
+
 
 class Instance:
     def __init__(self, response: dict[str, Any], client: EC2Client = None):
@@ -20,10 +22,15 @@ class Instance:
         self._UpTime: datetime.timedelta | None = (
             datetime.now(tz=timezone.utc) - self._AWSInstance.launch_time
         )
+        self._InstanceType: str = response["InstanceType"]
 
     @property
     def InstanceId(self) -> str:
         return self._InstanceId
+
+    @property
+    def InstanceType(self) -> str:
+        return self._InstanceType
 
     @property
     def UpTime(self) -> str:
@@ -75,7 +82,7 @@ class Instance:
         return self.State
 
     def __repr__(self) -> str:
-        return f"Name: {self.Name}, InstanceId: {self.InstanceId}, State: {self.State}"
+        return f"Name: {self.Name}, InstanceId: {self.InstanceId}, InstanceType: {self.InstanceType}, State: {self.State}"
 
 
 class Reservation:
@@ -91,7 +98,7 @@ class Reservation:
 
     def __repr__(self) -> str:
         instance_names = "\n".join(
-            f"Name: {_.Name}: InstanceId: {_.InstanceId}, State: {_.State}"
+            f"Name: {_.Name}: InstanceId: {_.InstanceId}, State: {_.State}, InstanceType: {_.InstanceType}"
             for _ in self.Instances
         )
         return instance_names

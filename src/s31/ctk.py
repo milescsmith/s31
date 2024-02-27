@@ -1,15 +1,32 @@
 import customtkinter as ck
+from loguru import logger
+from s31.logging import init_logger
+import boto3
+from s31.aws_classes import Reservation
+import datetime
 
+GPU_TYPES = [
+    "p5", "p4", "p3", "p2",
+    "g5g", "g5", "g4dn", "g4ad", "g3",
+    "trn1",
+    "inf1",
+    "dl1",
+    "dl2q",
+    "f1",
+    "vt1"
+]
+
+POLL_FREQUENCY = 1000
 
 class InstanceFrame(ck.CTkFrame):
     def __init__(self, master, width=300, height=36):
         super().__init__(master, width=width, height=height)
 
-        self.selected_instance = ck.StringVar(value="Arbiter")
+        self.selected_instance = ck.StringVar(value="")
         self.instance_box = ck.CTkComboBox(
             self,
             command=self.show_value,
-            values=["Arbiter", "Gravemind"],
+            values=[""],
             variable=self.selected_instance,
             width=width,
         )
@@ -80,15 +97,18 @@ class CheckboxFrame(ck.CTkFrame):
             self,
             width=width,
             text="Override Shutdown",
-            command=self.override_event,
+            command=self.on_click,
             variable=self.override_var,
             onvalue="on",
             offvalue="off",
         )
         self.override_cbox.grid(row=0, column=0, padx=5, pady=(5, 5), sticky="new")
 
-    def override_event(self):
-        return self.override_var.get()
+    def on_click(self):
+        logger.debug(self.override_cbox.get())
+        logger.debug(self.override_var.get())
+        if self.override_cbox.get() == "off":
+            self.master.update_progressbar()
 
 
 class ProgressFrame(ck.CTkFrame):
@@ -141,7 +161,23 @@ class App(ck.CTk):
         )
         self.time_remaining_frame.time_remaining_bar.set(self.time_remaining)
 
+        self.ec2 = boto3.client("ec2")
+        self.ec2_client = Reservation(self.ec2)
+        # This seems like it SHOULD work, but for some reason it does not return values for the instances I am using that
+        # DO have gpus
+        # gpu_types = [_["InstanceType"] for _ in ec2.describe_instance_types()["InstanceTypes"] if "GpuInfo" in _.keys()]
+        _gpu_instances = [
+            self.ec2_client[_].Name
+            for _ 
+            in self.ec2_client.InstanceDict 
+            if self.ec2_client[_].InstanceType.split(".")[0].lower() in GPU_TYPES
+            ]
+
+        self.instance_frame.selected_instance.set(_gpu_instances[1])
+        self.instance_frame.instance_box.configure(values=_gpu_instances)
+        
         self.update_progressbar()
+        self.update_uptime()
 
     def update_progressbar(self):
         self.time_remaining -= 0.01
@@ -150,12 +186,18 @@ class App(ck.CTk):
         )
         self.time_remaining_frame.time_remaining_bar.set(self.time_remaining)
 
-        if self.time_remaining > 0:
+        if (self.time_remaining > 0) and (self.override_frame.override_cbox.get() == "off"):
             self.after(100, self.update_progressbar)
         else:
             self.time_remaining_frame.time_left_label.configure(text="Time's up!")
+    
+    def update_uptime(self):
+        pass
 
-
-if __name__ == "__main__":
+def tkgui():
+    init_logger(verbose=3, save_log=False)
     app = App(width=275, height=325)
     app.mainloop()
+    
+if __name__ == "__main__":
+    tkgui()

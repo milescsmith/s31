@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "s31"
-version = "0.2.0"
+version = "0.2.1"
 description = "start, shutdown, and monitor AWS compute instances"
 authors = ["Miles Smith <mileschristiansmith@gmail.com>"]
 license = "LGPL-2.0"
@@ -25,7 +25,7 @@ jupyterlab = "^4.0.9"
 pyinstaller = "^6.3.0"
 
 [tool.poetry.scripts]
-s31 = 's31.__main__:main'
+s31 = 's31.cli:app'
 
 [build-system]
 requires = ["poetry-core"]
