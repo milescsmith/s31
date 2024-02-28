@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "s31"
-version = "0.2.1"
+version = "0.2.2"
 description = "start, shutdown, and monitor AWS compute instances"
 authors = ["Miles Smith <mileschristiansmith@gmail.com>"]
 license = "LGPL-2.0"

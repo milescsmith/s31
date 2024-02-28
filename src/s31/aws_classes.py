@@ -40,7 +40,7 @@ class Instance:
     def UpTimeRaw(self) -> datetime:
         return self._UpTime
 
-    def UpdateUpTime(self) -> str:
+    def update_up_time(self) -> str:
         self.update_status()
         if self.State == "running":
             self._UpTime = datetime.now(tz=timezone.utc) - self._AWSInstance.launch_time

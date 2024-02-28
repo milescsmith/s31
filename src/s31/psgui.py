@@ -148,7 +148,7 @@ def psgui(instance_name: str = "Arbiter") -> None:
         else:
             window["-STATE-"].update(text_color="black")
         window.refresh()
-        instance.UpdateUpTime()
+        instance.update_up_time()
         window["-STATE-"].update(instance.State)
         window["-UPTIME-"].update(instance.UpTime)
 

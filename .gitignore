@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 **/*.ipynb
 *.ipynb
+src/s31/test.py

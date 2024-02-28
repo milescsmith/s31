@@ -44,7 +44,7 @@ def main(
     ] = GUIType.PSG,
 ) -> None:
     init_logger(3, save_log=False)
-    logger.info("HELLO SEATLE!")
+    logger.info("HELLO SEATTLE!")
     match gui_type:
         case GUIType.PSG:
             psgui(machine_name)
