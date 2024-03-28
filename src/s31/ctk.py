@@ -1,23 +1,17 @@
-import customtkinter as ck
-from loguru import logger
-from s31.logging import init_logger
-import boto3
-from s31.aws_classes import Reservation
 import datetime
 import time
 
-GPU_TYPES = [
-    "p5", "p4", "p3", "p2",
-    "g5g", "g5", "g4dn", "g4ad", "g3",
-    "trn1",
-    "inf1",
-    "dl1",
-    "dl2q",
-    "f1",
-    "vt1"
-]
+import boto3
+import customtkinter as ck
+from loguru import logger
+
+from s31.aws_classes import Reservation
+from s31.logging import init_logger
+
+GPU_TYPES = ["p5", "p4", "p3", "p2", "g5g", "g5", "g4dn", "g4ad", "g3", "trn1", "inf1", "dl1", "dl2q", "f1", "vt1"]
 
 POLL_FREQUENCY = 1000
+
 
 class InstanceFrame(ck.CTkFrame):
     def __init__(self, master, width=300, height=36):
@@ -46,13 +40,13 @@ class StatusFrame(ck.CTkFrame):
         self.status_label = ck.CTkLabel(self, text="Status:")
         self.status_label.grid(row=0, column=0, padx=10, pady=5)
 
-        self.status_value_label = ck.CTkLabel(self, text="-") #self.master.status.get())
+        self.status_value_label = ck.CTkLabel(self, text="-")  # self.master.status.get())
         self.status_value_label.grid(row=1, column=0, padx=10, pady=5)
 
         self.uptime_label = ck.CTkLabel(self, text="Up time:")
         self.uptime_label.grid(row=0, column=1, padx=10, pady=5)
 
-        self.uptime_value_label = ck.CTkLabel(self, text="-:-:-") #self.master.uptime.get())
+        self.uptime_value_label = ck.CTkLabel(self, text="-:-:-")  # self.master.uptime.get())
         self.uptime_value_label.grid(row=1, column=1, padx=10, pady=5)
 
         self.timeremaining_label = ck.CTkLabel(self, text="Time remaining:")
@@ -67,13 +61,9 @@ class ButtonFrame(ck.CTkFrame):
         super().__init__(master, width=width)
 
         button_x_padding = (width - button_width * 2) / 8
-        self.start_button = ck.CTkButton(
-            self, text="Start", width=button_width, command=self.start_callback
-        )
+        self.start_button = ck.CTkButton(self, text="Start", width=button_width, command=self.start_callback)
         self.start_button.grid(row=0, column=0, padx=button_x_padding, pady=5)
-        self.stop_button = ck.CTkButton(
-            self, text="Stop", width=button_width, command=self.stop_callback
-        )
+        self.stop_button = ck.CTkButton(self, text="Stop", width=button_width, command=self.stop_callback)
         self.stop_button.grid(row=0, column=1, padx=button_x_padding, pady=5)
 
     def start_callback(self):
@@ -93,15 +83,24 @@ class SliderFrame(ck.CTkFrame):
 
         self.slider = ck.CTkSlider(
             self,
-            width=width,
-            from_=1, 
+            width=width-15,
+            height=1,
+            from_=1,
             to=24,
-            number_of_steps=24,
-            command=self.master.max_uptime.set,
-            hover=True
-            )
-        self.slider.grid(row=0, column=0, sticky="nws")
+            number_of_steps=23,
+            command=lambda x: self.change_max_uptime(x),
+            hover=True,
+        )
+        self.slider.grid(row=0, column=0, sticky="nwes", padx=(5,0), pady=5)
 
+        self.slider_val_label = ck.CTkLabel(self, text="24")
+        self.slider_val_label.grid(row=0, column=1, padx=(5,0), sticky="we")
+
+    def change_max_uptime(self, max_uptime):
+        self.slider_val_label.configure(text=int(max_uptime))
+        logger.debug(f"Max_uptime is currently: {self.master.max_uptime}")
+        self.master.max_uptime.set(max_uptime)
+        logger.debug(f"Setting max_uptime to: {int(max_uptime)} -> {self.master.max_uptime}")
 
 class CheckboxFrame(ck.CTkFrame):
     def __init__(self, master, width=300):
@@ -131,7 +130,11 @@ class ProgressFrame(ck.CTkFrame):
         # self.time_left = ck.DoubleVar()
         # self.time_left.set(amount_of_time)
 
-        self.time_left_label = ck.CTkLabel(self, text="", fg_color="transparent",)
+        self.time_left_label = ck.CTkLabel(
+            self,
+            text="",
+            fg_color="transparent",
+        )
         self.time_left_label.grid(row=0, column=0, sticky="nws")
         self.time_remaining_bar = ck.CTkProgressBar(
             self,
@@ -148,7 +151,7 @@ class App(ck.CTk):
         super().__init__()
         self.title("GPU starter")
         self.geometry(f"{width}x{height}")
-        
+
         # Create and initialize variables that will get updated
         self.i = ck.IntVar()
         self.status = ck.StringVar()
@@ -156,7 +159,7 @@ class App(ck.CTk):
         self.uptime = ck.Variable()
         self.uptime.set("-:-:-")
         self.max_uptime = ck.DoubleVar()
-        self.max_uptime.set(24)
+        self.max_uptime.set(datetime.timedelta(hours=24).total_seconds())
         self.time_remaining = ck.DoubleVar()
         self.time_remaining.set(self.max_uptime.get())
 
@@ -169,8 +172,8 @@ class App(ck.CTk):
         self.button_frame = ButtonFrame(self, width=300, button_width=110)
         self.button_frame.grid(row=2, column=0, padx=10, pady=(10, 0), sticky="nws")
 
-        self.slider_frame = SliderFrame(self, width=260)
-        self.slider_frame.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="nws")
+        self.slider_frame = SliderFrame(self, width=240)
+        self.slider_frame.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="nwes")
         self.slider_frame.slider.set(24)
 
         self.override_frame = CheckboxFrame(self, width=250)
@@ -178,13 +181,9 @@ class App(ck.CTk):
 
         # Create the progressbar that counts down until shutdown
         self.time_remaining_frame = ProgressFrame(self, width=260)
-        self.time_remaining_frame.grid(
-            row=5, column=0, padx=10, pady=(10, 0), sticky="nws"
-        )
-        # Set the time left label 
-        self.time_remaining_frame.time_left_label.configure(
-            text=f"{self.max_uptime.get():.2f}"
-        )
+        self.time_remaining_frame.grid(row=5, column=0, padx=10, pady=(10, 0), sticky="nws")
+        # Set the time left label
+        self.time_remaining_frame.time_left_label.configure(text=f"{self.max_uptime.get():.2f}")
         self.time_remaining_frame.time_remaining_bar.set(self.max_uptime.get())
 
         self.ec2 = boto3.client("ec2")
@@ -195,27 +194,25 @@ class App(ck.CTk):
         # gpu_types = [_["InstanceType"] for _ in ec2.describe_instance_types()["InstanceTypes"] if "GpuInfo" in _.keys()]
         _gpu_instances = [
             self.ec2_client[_].Name
-            for _ 
-            in self.ec2_client.InstanceDict 
+            for _ in self.ec2_client.InstanceDict
             if self.ec2_client[_].InstanceType.split(".")[0].lower() in GPU_TYPES
-            ]
+        ]
 
         self.instance_frame.selected_instance.set(_gpu_instances[1])
         self.instance_frame.instance_box.configure(values=_gpu_instances)
-        
+
         self.set_instance()
         logger.info(f"{self.instance=}")
 
         self.update_progressbar()
         self.update_uptime()
         self.update_status()
-        
+
     def update_status(self):
         self.instance.update_status()
         self.instance.update_up_time()
-        logger.debug(f"{self.i.get()}")
         if self.instance is not None:
-            logger.debug(f"Updating: {self.instance.Name=} {self.instance.State=} {self.instance.UpTime=}")
+            # logger.debug(f"Updating: {self.instance.Name=} {self.instance.State=} {self.instance.UpTime=}")
             self.status_frame.status_value_label.configure(text=self.instance.State)
             self.status_frame.uptime_value_label.configure(text=self.instance.UpTime)
             self.after(POLL_FREQUENCY, self.update_status)
@@ -229,24 +226,26 @@ class App(ck.CTk):
     def update_progressbar(self):
         # logger.debug("updating progressbar")
         # subtract 100 ms
-        self.max_uptime.set(self.max_uptime.get() - 0.01)
-        self.time_remaining_frame.time_left_label.configure(
-            text=f"{self.max_uptime.get():.2f}"
-        )
-        self.time_remaining_frame.time_remaining_bar.set(self.max_uptime.get())
+        logger.debug(f"{self.time_remaining.get()=}")
+        self.time_remaining.set(self.time_remaining.get() - 0.01)
+        logger.debug(f"{self.time_remaining.get()=}")
+        self.time_remaining_frame.time_left_label.configure(text=f"{self.time_remaining.get():.2f}")
+        # self.time_remaining_frame.time_remaining_bar.set(self.max_uptime.get())
 
-        if (self.max_uptime.get() > 0) and (self.override_frame.override_cbox.get() == "off"):
-            self.after(100, self.update_progressbar)
+        if (self.time_remaining.get() > 0) and (self.override_frame.override_cbox.get() == "off"):
+            self.after(1000, self.update_progressbar)
         else:
             self.time_remaining_frame.time_left_label.configure(text="Time's up!")
-    
+
     def update_uptime(self):
         pass
+
 
 def tkgui():
     init_logger(verbose=3, save_log=True)
     app = App(width=275, height=325)
     app.mainloop()
-    
+
+
 if __name__ == "__main__":
     tkgui()

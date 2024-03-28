@@ -4,12 +4,13 @@ from sys import stderr
 from loguru import logger
 
 
-def init_logger(verbose: int, save_log: bool = True, msg_format: str | None = None) -> None:
+def init_logger(verbose: int, save_log: bool = False, msg_format: str | None = None) -> None:
     logger.enable("s31")
     timezone = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
 
     try:
         from IPython import get_ipython
+
         in_notebook = get_ipython() is not None
     except ImportError:
         in_notebook = False
@@ -22,14 +23,13 @@ def init_logger(verbose: int, save_log: bool = True, msg_format: str | None = No
 
     match verbose:
         case 3:
-            log_level="DEBUG"   # catches DEBUG, INFO, WARNING, ERROR, and CRITICAL
+            log_level = "DEBUG"  # catches DEBUG, INFO, WARNING, ERROR, and CRITICAL
         case 2:
-            log_level="INFO"    # catches INFO, WARNING, ERROR, and CRITICAL
+            log_level = "INFO"  # catches INFO, WARNING, ERROR, and CRITICAL
         case 1:
-            log_level="WARNING" # catches WARNING, ERROR, and CRITICAL
+            log_level = "WARNING"  # catches WARNING, ERROR, and CRITICAL
         case _:
-            log_level="ERROR"   # Catches ERROR and CRITICAL
-
+            log_level = "ERROR"  # Catches ERROR and CRITICAL
 
     config = {
         "handlers": [

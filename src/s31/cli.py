@@ -1,25 +1,29 @@
-from loguru import logger
-from typing import Annotated
-import typer
-from rich.console import Console
 from enum import Enum
+from typing import Annotated
+
+import typer
+from loguru import logger
+from rich.console import Console
 
 from s31 import __version__
-from s31.psgui import psgui
 from s31.ctk import tkgui
 from s31.logging import init_logger
+from s31.psgui import psgui
 
 console = Console()
+
 
 class GUIType(str, Enum):
     TK = "TK"
     PSG = "PSG"
+
 
 def version_callback(value: bool) -> None:
     """Prints the version of the package."""
     if value:
         console.print(f"[yellow]fcsjanitor[/] version: [bold blue]{__version__}[/]")
         raise typer.Exit()
+
 
 app = typer.Typer(
     name="s31",
@@ -29,11 +33,10 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+
 @app.command(no_args_is_help=True)
 def main(
-    machine_name: Annotated[
-        str, typer.Argument(help="name of the virtual machine to control")
-    ] = "Arbiter",
+    machine_name: Annotated[str, typer.Argument(help="name of the virtual machine to control")] = "Arbiter",
     gui_type: Annotated[
         GUIType,
         typer.Option(

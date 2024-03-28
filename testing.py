@@ -1,3 +1,3 @@
-import s31
+from s31.ctk import tkgui
 
-s31.gui("defiant")
+tkgui()

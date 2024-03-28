@@ -86,9 +86,7 @@ def psgui(instance_name: str = "Arbiter") -> None:
     ]
 
     # Create the window
-    window = sg.Window(
-        "GPU starter", layout, ttk_theme=ttk_style, use_ttk_buttons=True, font=(16,)
-    )
+    window = sg.Window("GPU starter", layout, ttk_theme=ttk_style, use_ttk_buttons=True, font=(16,))
     POLL_FREQUENCY = 1000  # update the window every second
     PROGRESS_BAR_INITIALIZED = False
     # Create an event loop
@@ -124,21 +122,15 @@ def psgui(instance_name: str = "Arbiter") -> None:
             if instance.State == "running":
                 if instance.UpTimeRaw < max_uptime:
                     time_left = 100 - (instance.UpTimeRaw / max_uptime) * 100
-                    window["-TIME_REMAINING-"].update(
-                        str(max_uptime - instance.UpTimeRaw).split(".")[0]
-                    )
+                    window["-TIME_REMAINING-"].update(str(max_uptime - instance.UpTimeRaw).split(".")[0])
                     if time_left <= 10:
                         sg.popup(
                             f"Warning! Only {str(max_uptime - instance.UpTimeRaw).split('.')[0]} remains before automatic shutdown!"
                         )
-                        window["-PROGRESS-"].update(
-                            visible=True, current_count=time_left, bar_color="red"
-                        )
+                        window["-PROGRESS-"].update(visible=True, current_count=time_left, bar_color="red")
                         window["-TIME_REMAINING-"].update(text_color="red")
                     else:
-                        window["-PROGRESS-"].update(
-                            visible=True, current_count=time_left, bar_color="green"
-                        )
+                        window["-PROGRESS-"].update(visible=True, current_count=time_left, bar_color="green")
             else:
                 window["-STATE-"].update(text_color="red")
                 window["-TIME_REMAINING-"].update("-")
