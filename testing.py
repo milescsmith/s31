@@ -1,3 +1,3 @@
 from s31.ctk import tkgui
 
-tkgui()
+tkgui(log_level=3)

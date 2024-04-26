@@ -52,6 +52,7 @@ def main(
         case GUIType.PSG:
             psgui(machine_name)
         case GUIType.TK:
+            logger.info("YOU HAVE SELECTED... POWER DRIVE.")
             tkgui()
         case _:
             pass
