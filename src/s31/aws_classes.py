@@ -12,117 +12,129 @@ class Instance:
     def __init__(self, response: dict[str, Any], client: EC2Client = None):
         self.Tags: dict[str, Any] = {_["Key"]: _["Value"] for _ in response["Tags"]}
         self.Name: str = self.Tags["Name"]
-        self._InstanceId: str = response["InstanceId"]
-        self._State: str = response["State"]["Name"]
-        self._ParentReservation: EC2Client = client
+        self._instance_id: str = response["InstanceId"]
+        self._state: str = response["State"]["Name"]
+        self._parent_reservation: EC2Client = client
         self._response_dict: dict[str, Any] = response
         self._launch_time: datetime = response["LaunchTime"]
-        self._AWSInstance: AWSInstance = boto3.resource("ec2").Instance(self._InstanceId)
-        self._UpTime: timedelta | None = datetime.now(tz=timezone.utc) - self._AWSInstance.launch_time
-        self._MaxHoursUp: int = 24
-        self._AutoShutdown: bool = True
-        self._TimeLeft: timedelta | None = None
-        self._InstanceType: str = response["InstanceType"]
+        self._aws_instance: AWSInstance = boto3.resource("ec2").Instance(self._instance_id)
+        self._uptime: timedelta | None = datetime.now(tz=timezone.utc) - self._aws_instance.launch_time
+        self._max_hours_up: int = 24
+        self._auto_shutdown: bool = True
+        self._time_left: timedelta | None = None
+        self._instance_type: str = response["InstanceType"]
+        self._shutdown_time: datetime | None = None
 
-        if self._AutoShutdown and (self._State == "running"):
-            self._TimeLeft = timedelta(minutes=self._MaxHoursUp) - self._UpTime
-        elif self._State == "stopped":
-            self._TimeLeft = timedelta(minutes=0)
+        if self._auto_shutdown and (self._state == "running"):
+            self._time_left = timedelta(minutes=self._max_hours_up) - self._uptime
+        elif self._state == "stopped":
+            self._time_left = timedelta(minutes=0)
+
+    # object property getters and setters
+    @property
+    def auto_shutdown(self) -> bool:
+        return self._auto_shutdown
+
+    @auto_shutdown.setter
+    def auto_shutdown(self, state: bool = True) -> None:
+        self._auto_shutdown = state
 
     @property
-    def InstanceId(self) -> str:
-        return self._InstanceId
+    def instance_id(self) -> str:
+        return self._instance_id
 
     @property
-    def InstanceType(self) -> str:
-        return self._InstanceType
+    def instance_type(self) -> str:
+        return self._instance_type
 
     @property
-    def UpTime(self) -> str:
-        return self.convert_display_time(self._UpTime)
+    def max_hours_up(self):
+        return self._max_hours_up
+
+    @max_hours_up.setter
+    def max_hours_up(self, max_up) -> None:
+        self._max_hours_up = max_up
+
+    @max_hours_up.deleter
+    def max_hours_up(self) -> None:
+        del self._max_hours_up
 
     @property
-    def UpTimeRaw(self) -> datetime:
-        return self._UpTime
+    def state(self) -> str:
+        return self._state
 
-    def update_time_left(self) -> timedelta:
-        if self.AutoShutdown:
-            self._TimeLeft = timedelta(minutes=self._MaxHoursUp) - self._UpTime
+    @state.setter
+    def state(self, update) -> None:
+        self._state = update
+    
+    @property
+    def time_left(self) -> str:
+        self._update_time_left()
+        return self.convert_display_time(self._time_left)
+
+    @property
+    def time_left_raw(self) -> timedelta:
+        self._update_time_left()
+        return self._time_left
+
+    @property
+    def uptime(self) -> str:
+        return self.convert_display_time(self._uptime)
+
+    @property
+    def uptime_raw(self) -> datetime:
+        return self._uptime
+
+    # object methods
+    def set_tag(self, key, value):
+        pass
+    
+    def reset_time_left(self) -> None:
+        self._time_left = timedelta(minutes=self._max_hours_up)
+    
+    def update_status(self) -> str:
+        self._aws_instance.load()
+        self.state = self._aws_instance.state["Name"]
+        return self.state
+    
+    def _update_time_left(self) -> timedelta:
+        if self.auto_shutdown:
+            self._time_left = timedelta(minutes=self._max_hours_up) - self._uptime
         else:
-            self._TimeLeft = None
-
-    @property
-    def TimeLeft(self) -> str:
-        self.update_time_left()
-        return self.convert_display_time(self._TimeLeft)
-
-    @property
-    def TimeLeftRaw(self) -> timedelta:
-        self.update_time_left()
-        return self._TimeLeft
-
-    def ResetTimeLeft(self) -> None:
-        self._TimeLeft = timedelta(minutes=self._MaxHoursUp)
-
-    @property
-    def MaxHoursUp(self):
-        return self._MaxHoursUp
-
-    @MaxHoursUp.setter
-    def MaxHoursUp(self, max_up) -> None:
-        self._MaxHoursUp = max_up
-
-    def set_max_hours_up(self, hours) -> None:
-        self._MaxHoursUp = hours
-
-    @property
-    def State(self) -> str:
-        return self._State
-
-    @State.setter
-    def State(self, update) -> None:
-        self._State = update
-
-    @property
-    def AutoShutdown(self) -> bool:
-        return self._AutoShutdown
-
-    @AutoShutdown.setter
-    def AutoShutdown(self, state) -> None:
-        self._AutoShutdown = state
-
-    def update_up_time(self) -> str:
+            self._time_left = None
+    
+    def _update_uptime(self) -> str:
         self.update_status()
-        if self.State == "running":
-            self._UpTime = datetime.now(tz=timezone.utc) - self._AWSInstance.launch_time
+        if self.state == "running":
+            self._uptime = datetime.now(tz=timezone.utc) - self._aws_instance.launch_time
         else:
-            self._UpTime = None
+            self._uptime = None
 
-        if self._UpTime is None:
+        if self._uptime is None:
             return f"{self.Name} is not running"
         else:
-            return self.convert_display_time(self._UpTime)
-
-    def update_status(self) -> str:
-        self._AWSInstance.load()
-        self.State = self._AWSInstance.state["Name"]
-        return self.State
+            return self.convert_display_time(self._uptime)
 
     # async def start_instance(self) -> str:
     def start_instance(self) -> str:
-        self._AWSInstance.start()
-        self.State = "starting up"
+        self._aws_instance.start()
+        self.state = "starting up"
         # self._AWSInstance.wait_until_running()
         # self.update_status()
-        return self.State
+        if self.max_uptime:
+            self._shutdown_time = datetime.now() + timedelta(hours=self.max_uptime)
+        else:
+            self.auto_shutdown = False
+            self._shutdown_time = datetime.now() + timedelta(days=365)
+        return self.state
 
     # async def stop_instance(self) -> str:
     def stop_instance(self) -> str:
-        self._AWSInstance.stop()
-        self.State = "shutting down"
+        self._aws_instance.stop()
+        self.state = "shutting down"
         # self._AWSInstance.wait_until_stopped()
         # self.update_status()
-        return self.State
+        return self.state
 
     def convert_display_time(self, timevalue: timedelta | None = None) -> str:
         # if you need more than days here, find Jesus, touch grass, whatever
@@ -138,7 +150,7 @@ class Instance:
 
     def __repr__(self) -> str:
         return (
-            f"Name: {self.Name}, InstanceId: {self.InstanceId}, InstanceType: {self.InstanceType}, State: {self.State}"
+            f"Name: {self.Name}, InstanceId: {self.instance_id}, InstanceType: {self.instance_type}, State: {self.state}"
         )
 
 
@@ -153,7 +165,7 @@ class Reservation:
 
     def __repr__(self) -> str:
         instance_names = "\n".join(
-            f"Name: {_.Name}: InstanceId: {_.InstanceId}, State: {_.State}, InstanceType: {_.InstanceType}"
+            f"Name: {_.Name}: InstanceId: {_.instance_id}, State: {_.state}, InstanceType: {_.instance_type}"
             for _ in self.Instances
         )
         return instance_names

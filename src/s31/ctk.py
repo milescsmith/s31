@@ -1,5 +1,5 @@
 import datetime
-
+from dateutil.relativedelta import relativedelta
 import boto3
 import customtkinter as ck
 from loguru import logger
@@ -9,7 +9,7 @@ from s31.logging import init_logger
 
 GPU_TYPES = ["p5", "p4", "p3", "p2", "g5g", "g5", "g4dn", "g4ad", "g3", "trn1", "inf1", "dl1", "dl2q", "f1", "vt1"]
 
-POLL_FREQUENCY = 1000
+POLL_FREQUENCY = 500
 
 APP_FOREGROUND_COLOR = "#DDDDDD"
 SUBFRAME_FOREGROUND_COLOR = "#999999"
@@ -41,32 +41,22 @@ class App(ck.CTk):
         self.max_uptime = ck.DoubleVar()
         self.max_uptime.set(datetime.timedelta(minutes=24).total_seconds())
         self.time_remaining = ck.DoubleVar()
+        logger.debug(f"setting time_remaining to {self.max_uptime.get()}")
         self.time_remaining.set(self.max_uptime.get())
 
         logger.debug(f"{self.max_uptime.get()=}")
         logger.debug(f"{self.time_remaining.get()=}")
 
-        # Setup interface with AWS
-        self.ec2 = boto3.client("ec2")
-        self.ec2_client = Reservation(self.ec2)
-        self.instance = None
-
-        # get the instances that have a GPU and put them in the list that will be used
-        # in the gui dropbox
-        _gpu_instances = [
-            self.ec2_client[_].Name
-            for _ in self.ec2_client.InstanceDict
-            if self.ec2_client[_].InstanceType.split(".")[0].lower() in GPU_TYPES
-        ]
+        self.build_instance_dict()
 
         # wrap this up in a function for cleanliness/organization
         self.build_gui()
 
         # Set the selected instance to the first item in the list
-        self.instance_frame.selected_instance.set(_gpu_instances[1])
-        self.instance_frame.instance_box.configure(values=_gpu_instances)
+        self.instance_frame.selected_instance.set(self._gpu_instances[1])
+        self.instance_frame.instance_box.configure(values=self._gpu_instances)
         self.set_instance()
-        logger.info(f"{self.instance=}")
+        logger.info(f"{self.selected_instance=}")
 
         # most of the app loop happens in this function
         self.update_ui()
@@ -76,23 +66,38 @@ class App(ck.CTk):
         self.time_remaining_frame.time_remaining_bar.set(self.max_uptime.get())
 
 
+    def build_instance_dict(self):
+        # Setup interface with AWS
+        self.ec2 = boto3.client("ec2")
+        self.ec2_client = Reservation(self.ec2)
+        self.selected_instance = None
+
+        # get the instances that have a GPU and put them in the list that will be used
+        # in the gui dropbox
+        self._gpu_instances = [
+            self.ec2_client[_].Name
+            for _ in self.ec2_client.InstanceDict
+            if self.ec2_client[_].instance_type.split(".")[0].lower() in GPU_TYPES
+        ]
+        # self.instances =
+
     def set_instance(self):
-        self.instance = self.ec2_client[self.instance_frame.selected_instance.get()]
+        self.selected_instance = self.ec2_client[self.instance_frame.selected_instance.get()]
         self.update_status()
         logger.debug(f"instance changed to {self.instance_frame.selected_instance.get()}")
 
     def update_ui(self):
-        if self.instance:
+        if self.selected_instance:
             self.update_status()
-            if self.instance.State == "running":
+            if self.selected_instance.state == "running":
                 self.update_uptime()
-                logger.debug(f"{self.instance.UpTime=}")
-                if self.instance.AutoShutdown:
+                logger.debug(f"{self.selected_instance.uptime=}")
+                if self.selected_instance.auto_shutdown:
                     self.update_timeleft()
-                    logger.debug(f"{self.instance.TimeLeft=}")
+                    logger.debug(f"{self.selected_instance.time_left=}")
 
-                    if (self.instance.TimeLeftRaw.total_seconds() <= 0) and (self.override_frame.override_cbox.get() == "off"):
-                        self.instance.stop_instance()
+                    if (self.selected_instance.time_left_raw.total_seconds() <= 0) and (self.override_frame.override_cbox.get() == "off"):
+                        self.selected_instance.stop_instance()
                         self.time_remaining.set(0)
                     else:
                         self.update_progressbar()
@@ -106,28 +111,33 @@ class App(ck.CTk):
         self.after(POLL_FREQUENCY, self.update_ui)
 
     def update_status(self):
-        old_status = self.instance.State # I don't need a heatbeat or noise in the log
-        self.instance.update_status()
-        if self.instance.State != old_status:
-            logger.debug(f"{self.instance.State=}")
-        self.status_frame.status_value_label.configure(text=self.instance.State)
+        old_status = self.selected_instance.state # I don't need a heatbeat or noise in the log
+        self.selected_instance.update_status()
+        if self.selected_instance.state != old_status:
+            logger.debug(f"{self.selected_instance.state=}")
+            self.update_status()
+        self.status_frame.status_value_label.configure(text=self.selected_instance.state)
 
 
     def update_uptime(self):
-        self.instance.update_up_time()
-        self.uptime.set(self.instance.UpTime)
+        self.selected_instance._update_uptime()
+        self.uptime.set(self.selected_instance.uptime)
         self.status_frame.uptime_value_label.configure(text=self.uptime.get())
 
     def update_timeleft(self):
-        logger.debug(f"{self.instance.AutoShutdown=}")
-        self.instance.update_time_left()
-        self.time_remaining.set(self.instance.TimeLeft)
-        self.status_frame.timeremaining_value_label.configure(text=self.instance.TimeLeft)
+        logger.debug(f"{self.selected_instance.auto_shutdown=}")
+        self.selected_instance._update_time_left()
+        logger.debug(f"Setting time_remaining to {self.selected_instance.time_left_raw.total_seconds()}")
+        self.time_remaining.set(self.selected_instance.time_left_raw.total_seconds())
+        self.status_frame.timeremaining_value_label.configure(text=self.selected_instance.time_left)
 
     def update_progressbar(self):
-        if self.instance.AutoShutdown:
+        if self.selected_instance.auto_shutdown:
+            logger.debug(f"{self.time_remaining.get()=}")
+            logger.debug(f"{self.max_uptime.get()=}")
             remaining_time_fraction = self.time_remaining.get()/self.max_uptime.get()
             TICK_TOCK_MOTHERFUCKER = 0.1
+            logger.debug(f"{remaining_time_fraction=}")
             if remaining_time_fraction <= TICK_TOCK_MOTHERFUCKER:
                 self.time_remaining_frame.time_remaining_bar.configure(progress_color="red")
             else:
@@ -394,20 +404,20 @@ class TimeLimitFrame(ck.CTkFrame):
             row=2,
             column=0,
             padx=SUBELEMENT_PADX,
-            sticky="w",
+            sticky="we",
             columnspan=1,
             )
 
         self.new_limit_label = ck.CTkLabel(
             self,
-            text="New time limit:",
+            text="New time limit (h):",
             padx=SUBELEMENT_PADX,
             )
         self.new_limit_label.grid(
             row=2,
             column=2,
             padx=SUBELEMENT_PADX,
-            sticky="e",
+            sticky="we",
             columnspan=1,
             )
 
@@ -415,6 +425,7 @@ class TimeLimitFrame(ck.CTkFrame):
         self.current_limit_value_label = ck.CTkLabel(
             self,
             text=self.master.max_uptime.get(),
+            justify="center",
             )
         self.current_limit_value_label.grid(
             row=3,
@@ -422,7 +433,6 @@ class TimeLimitFrame(ck.CTkFrame):
             padx=SUBELEMENT_PADX,
             columnspan=1,
             sticky="w",
-            justify="center",
             )
 
 
@@ -441,12 +451,10 @@ class TimeLimitFrame(ck.CTkFrame):
 
 
     def change_max_uptime(self, max_uptime):
-        self.slider_val_label.configure(text=int(max_uptime))
-        logger.debug(f"Max_uptime is currently: {self.master.instance.MaxHoursUp}")
-        self.master.instance.set_max_hours_up(max_uptime)
-        logger.debug(f"Setting max_uptime to: {int(max_uptime)} -> {self.master.instance.MaxHoursUp}")
-        self.new_limit_value_label = ck.CTkLabel(self, text=int(self.master.max_uptime.get()))
-        self.master.instance.ResetTimeLeft()
+        logger.debug(f"Max_uptime is currently: {self.master.max_uptime.get()}")
+        self.master.max_uptime.set(max_uptime)
+        self.slider_val_label.configure(text=int(self.master.max_uptime.get()))
+        self.new_limit_value_label.configure(text=int(self.master.max_uptime.get()))
 
 
 class OverrideFrame(ck.CTkFrame):
@@ -477,7 +485,10 @@ class OverrideFrame(ck.CTkFrame):
 
     def reset_callback(self):
         if self.master.instance.State == "running":
-            self.master.instance.ResetTimeLeft()
+            logger.debug(f"Setting max_uptime to: {self.master.instance.MaxHoursUp}")
+        self.master.instance.MaxHoursUp = self.master.max_uptime.get()
+        logger.debug(f"{self.instance.max_uptime.get()=}")
+        self.master.instance.ResetTimeLeft()
         self.master.update_status()
         self.master.update_progressbar()
         logger.debug(f"Maximum uptime is: {self.master.instance.MaxHoursUp}")
@@ -496,11 +507,17 @@ class CountdownFrame(ck.CTkFrame):
             mode="determinate",
             progress_color="green"
         )
-        self.time_remaining_bar.grid(row=0, column=0, padx=SUBELEMENT_PADX, pady=SUBELEMENT_PADY)
+        self.time_remaining_bar.grid(
+            row=0,
+            column=0,
+            padx=SUBELEMENT_PADX,
+            pady=SUBELEMENT_PADY,
+            sticky="we"
+            )
 
 def tkgui(log_level: int = 3, save_log: bool = False):
     init_logger(verbose=log_level, save_log=save_log)
-    app = App(width=320, height=375)
+    app = App(width=320, height=400)
     app.mainloop()
 
 

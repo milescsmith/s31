@@ -26,11 +26,11 @@ def psgui(instance_name: str = "Arbiter") -> None:
         ],
         [
             sg.Text(
-                f"{instance.State}",
+                f"{instance.state}",
                 key="-STATE-",
             ),
             sg.Text(
-                f"{instance.UpTime}",
+                f"{instance.uptime}",
                 key="-UPTIME-",
             ),
             sg.Text(
@@ -108,7 +108,7 @@ def psgui(instance_name: str = "Arbiter") -> None:
         # window["-OVERRIDE-STATUS-"].update(f"Override is {'enabled' if values['-OVERRIDE-'] else 'disabled'}")
         max_uptime = datetime.timedelta(hours=values["-TIMELIMIT-"])
 
-        if not window["-OVERRIDE-"] and (instance.UpTimeRaw > max_uptime):
+        if not window["-OVERRIDE-"] and (instance.uptime_raw > max_uptime):
             instance.stop_instance()
             sg.popup(f"The {values['-TIMELIMIT-']}h time limit has been reached!")
 
@@ -119,13 +119,13 @@ def psgui(instance_name: str = "Arbiter") -> None:
             window.refresh()
         else:
             window["-TIMELIMIT-"].update(visible=True)
-            if instance.State == "running":
-                if instance.UpTimeRaw < max_uptime:
-                    time_left = 100 - (instance.UpTimeRaw / max_uptime) * 100
-                    window["-TIME_REMAINING-"].update(str(max_uptime - instance.UpTimeRaw).split(".")[0])
+            if instance.state == "running":
+                if instance.uptime_raw < max_uptime:
+                    time_left = 100 - (instance.uptime_raw / max_uptime) * 100
+                    window["-TIME_REMAINING-"].update(str(max_uptime - instance.uptime_raw).split(".")[0])
                     if time_left <= 10:
                         sg.popup(
-                            f"Warning! Only {str(max_uptime - instance.UpTimeRaw).split('.')[0]} remains before automatic shutdown!"
+                            f"Warning! Only {str(max_uptime - instance.uptime_raw).split('.')[0]} remains before automatic shutdown!"
                         )
                         window["-PROGRESS-"].update(visible=True, current_count=time_left, bar_color="red")
                         window["-TIME_REMAINING-"].update(text_color="red")
@@ -135,14 +135,14 @@ def psgui(instance_name: str = "Arbiter") -> None:
                 window["-STATE-"].update(text_color="red")
                 window["-TIME_REMAINING-"].update("-")
 
-        if instance.State == "running":
+        if instance.state == "running":
             window["-STATE-"].update(text_color="green")
         else:
             window["-STATE-"].update(text_color="black")
         window.refresh()
-        instance.update_up_time()
-        window["-STATE-"].update(instance.State)
-        window["-UPTIME-"].update(instance.UpTime)
+        instance._update_uptime()
+        window["-STATE-"].update(instance.state)
+        window["-UPTIME-"].update(instance.uptime)
 
     window.close()
 
