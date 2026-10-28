@@ -1,0 +1,81 @@
+[build-system]
+requires = ["uv_build>=0.7.0,<0.14.0"]
+build-backend = "uv_build"
+
+[project]
+name = "s31"
+version = "0.2.0"
+description = "start, shutdown, and monitor AWS compute instances"
+authors = [
+    { name = "Miles Smith", email = "miles-smith@omrf.org" }
+]
+license = {text = "LGPL-2.0"}
+readme = {file = "README.md", content-type="text/markdown"}
+requires-python = ">=3.14"
+dependencies = [
+    "boto3-stubs>=1.43.120",
+    "boto3[crt]>=1.43.120",
+    "loguru>=0.7.3",
+    "requests>=2.34.2",
+    "rich>=15.0.0",
+    "swiftgui>=0.11.19",
+]
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Rust",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Typing :: Typed",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+homepage = "https://github.com/milescsmith/s31"
+repository = "https://github.com/milescsmith/s31"
+changelog = "https://github.com/milescsmith/s31/CHANGELOG.md"
+
+[project.scripts]
+s31 = "s31.__main__:main"
+
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17.3",
+    "ty>=0.0.94",
+]
+tests = [
+    "codecov>=2.1.13",
+    "coverage>=7.17.0",
+    "nox>=2026.10.20",
+    "pytest>=9.2.0",
+    "pytest-xdist>=3.8.0",
+]
+
+
+[tool.coverage.paths]
+source = ["src", "*/site-packages"]
+
+[tool.coverage.run]
+branch = true
+source = ["package"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 100
+
+[tool.pytest.ini_options]
+pythonpath = "."
+addopts = [
+    "--import-mode=importlib",
+]
+typeguard-packages = "package"
