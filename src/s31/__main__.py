@@ -1,12 +1,16 @@
-import PySimpleGUI as sg
-import boto3
-import platform
 import datetime
+import platform
+
+import boto3
+
+import PySimpleGUI as sg
+from botocore.exceptions import ClientError
+
 from .aws_classes import Reservation
 
 
 def gui(instance_name: str = "Arbiter") -> None:
-    sg.theme("SystemDefaultForReal")
+    # sg.theme("SystemDefaultForReal")
     if platform.system() == "Windows":
         ttk_style = "vista"
     elif platform.system() == "Darwin":
@@ -65,10 +69,10 @@ def gui(instance_name: str = "Arbiter") -> None:
         ],
         [
             sg.Checkbox(
-                "Override shutdown",
-                default=False,
-                tooltip="If checked, do not shutdown the machine \nafter the set number of hours",
-                enable_events=True,
+                text="Override shutdown",
+                # default_event=False,
+                # tooltip="If checked, do not shutdown the machine \nafter the set number of hours",
+                # enable_events=True,
                 key="-OVERRIDE-",
             ),
         ],
@@ -86,9 +90,7 @@ def gui(instance_name: str = "Arbiter") -> None:
     ]
 
     # Create the window
-    window = sg.Window(
-        "GPU starter", layout, ttk_theme=ttk_style, use_ttk_buttons=True, font=(16,)
-    )
+    window = sg.Window(layout=layout, title="GPU starter", ttk_theme=ttk_style, font=(16,), use_ttk_buttons=True,)
     POLL_FREQUENCY = 1000  # update the window every second
     PROGRESS_BAR_INITIALIZED = False
     # Create an event loop
@@ -124,21 +126,15 @@ def gui(instance_name: str = "Arbiter") -> None:
             if instance.State == "running":
                 if instance.UpTimeRaw < max_uptime:
                     time_left = 100 - (instance.UpTimeRaw / max_uptime) * 100
-                    window["-TIME_REMAINING-"].update(
-                        str(max_uptime - instance.UpTimeRaw).split(".")[0]
-                    )
+                    window["-TIME_REMAINING-"].update(str(max_uptime - instance.UpTimeRaw).split(".")[0])
                     if time_left <= 10:
                         sg.popup(
                             f"Warning! Only {str(max_uptime - instance.UpTimeRaw).split('.')[0]} remains before automatic shutdown!"
                         )
-                        window["-PROGRESS-"].update(
-                            visible=True, current_count=time_left, bar_color="red"
-                        )
+                        window["-PROGRESS-"].update(visible=True, current_count=time_left, bar_color="red")
                         window["-TIME_REMAINING-"].update(text_color="red")
                     else:
-                        window["-PROGRESS-"].update(
-                            visible=True, current_count=time_left, bar_color="green"
-                        )
+                        window["-PROGRESS-"].update(visible=True, current_count=time_left, bar_color="green")
             else:
                 window["-STATE-"].update(text_color="red")
                 window["-TIME_REMAINING-"].update("-")
@@ -156,7 +152,12 @@ def gui(instance_name: str = "Arbiter") -> None:
 
 
 def main():
-    gui("Arbiter")
+    try:
+        gui("Arbiter")
+    except ClientError as err:
+        msg = "There is an issue with accessing AWS resources. Are you sure you have properly set your AWS credentials (e.g. run `aws login --remote`?)"
+        raise RuntimeError(msg) from err
+
 
 if __name__ == "__main__":
     main()

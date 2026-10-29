@@ -14,12 +14,8 @@ class Instance:
         self._ParentReservation: EC2Client = client
         self._response_dict: dict[str, Any] = response
         self._launch_time: datetime.datetime = response["LaunchTime"]
-        self._AWSInstance: AWSInstance = boto3.resource("ec2").Instance(
-            self._InstanceId
-        )
-        self._UpTime: datetime.timedelta | None = (
-            datetime.now(tz=timezone.utc) - self._AWSInstance.launch_time
-        )
+        self._AWSInstance: AWSInstance = boto3.resource("ec2").Instance(self._InstanceId)
+        self._UpTime: datetime.timedelta | None = datetime.now(tz=timezone.utc) - self._AWSInstance.launch_time
 
     @property
     def InstanceId(self) -> str:
@@ -81,9 +77,7 @@ class Instance:
 class Reservation:
     def __init__(self, client):
         response = client.describe_instances()
-        self.Instances = [
-            Instance(_["Instances"][0], client) for _ in response["Reservations"]
-        ]
+        self.Instances = [Instance(_["Instances"][0], client) for _ in response["Reservations"]]
         self.InstanceDict: dict[str, Instance] = {_.Name: _ for _ in self.Instances}
 
     def __getitem__(self, name) -> Instance:
@@ -91,7 +85,6 @@ class Reservation:
 
     def __repr__(self) -> str:
         instance_names = "\n".join(
-            f"Name: {_.Name}: InstanceId: {_.InstanceId}, State: {_.State}"
-            for _ in self.Instances
+            f"Name: {_.Name}: InstanceId: {_.InstanceId}, State: {_.State}" for _ in self.Instances
         )
         return instance_names

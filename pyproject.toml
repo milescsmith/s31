@@ -15,10 +15,12 @@ requires-python = ">=3.14"
 dependencies = [
     "boto3-stubs>=1.43.120",
     "boto3[crt]>=1.43.120",
+    "freesimplegui>=5.3.0.post1",
     "loguru>=0.7.3",
+    "mypy-boto3-ec2>=1.43.120",
+    "pysimplegui>=6.3.0.1",
     "requests>=2.34.2",
     "rich>=15.0.0",
-    "swiftgui>=0.11.19",
 ]
 classifiers = [
     "Programming Language :: Python",
@@ -33,7 +35,6 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Typing :: Typed",
     "Topic :: Software Development :: Libraries :: Python Modules",
